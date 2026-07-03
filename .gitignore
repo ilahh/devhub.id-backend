@@ -1,0 +1,16 @@
+.env
+.env.local
+
+# Modules
+./frontend/node_modules
+./frontend/.next
+
+./uploads/avatars/*
+!./uploads/avatars/.gitkeep
+
+/bin/
+*.exe
+*.out
+
+.DS_Store
+*.log
