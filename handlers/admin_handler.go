@@ -58,12 +58,6 @@ func UpdateUserRole(c *gin.Context) {
 		return
 	}
 
-	// Assign role admin/moderator hanya lewat dashboard admin (di sini). Saat itu terjadi,
-	// email user otomatis dimasukkan ke whitelist agar bisa login sesuai role barunya.
-	if user.Role == models.RoleAdmin || user.Role == models.RoleModerator {
-		_ = config.EnsureWhitelisted(user.Role, user.Email)
-	}
-
 	utils.SuccessResponse(c, 200, user)
 }
 

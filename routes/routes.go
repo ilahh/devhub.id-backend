@@ -24,6 +24,16 @@ func SetupRoutes(r *gin.Engine) {
 		protected.GET("/profile", handlers.GetProfile)
 		protected.PUT("/profile", handlers.UpdateProfile)
 		protected.POST("/avatar", handlers.UploadAvatar)
+
+		// Profil Profesional: skill, riwayat pekerjaan, tempat tugas, mata pelajaran.
+		protected.GET("/professional-profile", handlers.GetProfessionalProfile)
+		protected.PUT("/professional-profile", handlers.UpdateProfessionalProfile)
+
+		// Portofolio: kumpulan karya/pencapaian milik user (CRUD + upload gambar).
+		protected.GET("/portfolios", handlers.GetPortfolios)
+		protected.POST("/portfolios", handlers.CreatePortfolio)
+		protected.PUT("/portfolios/:id", handlers.UpdatePortfolio)
+		protected.DELETE("/portfolios/:id", handlers.DeletePortfolio)
 	}
 
 	// Khusus admin: kelola seluruh user (ubah role, suspend, hapus)
@@ -34,12 +44,6 @@ func SetupRoutes(r *gin.Engine) {
 		adminGroup.PUT("/users/:id/role", handlers.UpdateUserRole)
 		adminGroup.PATCH("/users/:id/status", handlers.ToggleUserStatus)
 		adminGroup.DELETE("/users/:id", handlers.DeleteUser)
-
-		// Kelola whitelist email admin/moderator dari dashboard admin.
-		adminGroup.GET("/whitelists", handlers.ListWhitelists)
-		adminGroup.POST("/whitelists", handlers.CreateWhitelist)
-		adminGroup.PATCH("/whitelists/:id/status", handlers.ToggleWhitelistStatus)
-		adminGroup.DELETE("/whitelists/:id", handlers.DeleteWhitelist)
 	}
 
 	// Khusus moderator (admin juga boleh akses): moderasi user dengan role member

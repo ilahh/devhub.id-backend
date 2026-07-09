@@ -20,14 +20,18 @@ func main() {
 	}
 
 	config.ConnectDatabase()
-	config.DB.AutoMigrate(&models.User{}, &models.RoleEmailWhitelist{})
+	config.DB.AutoMigrate(
+		&models.User{},
+		&models.ProfessionalProfile{},
+		&models.Skill{},
+		&models.WorkExperience{},
+		&models.Subject{},
+		&models.Portfolio{},
+	)
 
 	config.DB.Model(&models.User{}).
 		Where("id = (SELECT MIN(id) FROM users) AND role <> ?", models.RoleAdmin).
 		Update("role", models.RoleAdmin)
-
-	config.SeedWhitelistFromEnv()
-	config.AutoWhitelistExistingStaff()
 
 	r := gin.Default()
 

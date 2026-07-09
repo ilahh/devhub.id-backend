@@ -82,13 +82,6 @@ func Register(c *gin.Context) {
 		return
 	}
 
-	// Register publik SELALU membuat akun member (role tidak pernah diambil dari input).
-	// Satu-satunya pengecualian adalah user pertama yang otomatis menjadi admin; untuk
-	// kasus itu, emailnya langsung dimasukkan ke whitelist agar tetap bisa login.
-	if role == models.RoleAdmin || role == models.RoleModerator {
-		_ = config.EnsureWhitelisted(role, user.Email)
-	}
-
 	utils.SuccessResponse(c, 201, gin.H{
 		"message": "Registrasi berhasil",
 		"user":    user,
@@ -116,15 +109,6 @@ func Login(c *gin.Context) {
 	if !user.IsActive {
 		utils.ErrorResponse(c, 403, "Akun kamu sedang dinonaktifkan")
 		return
-	}
-
-	// Admin & moderator hanya boleh login jika email mereka ada di whitelist role terkait.
-	// Pesan sengaja dibuat generik agar tidak membocorkan status whitelist ke publik.
-	if user.Role == models.RoleAdmin || user.Role == models.RoleModerator {
-		if !config.IsEmailWhitelisted(user.Role, user.Email) {
-			utils.ErrorResponse(c, 403, "Email tidak memiliki akses untuk role ini")
-			return
-		}
 	}
 
 	token, err := utils.GenerateToken(user.Id, user.Role)
