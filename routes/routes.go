@@ -15,6 +15,16 @@ func SetupRoutes(r *gin.Engine) {
 	authGroup.POST("/register", handlers.Register)
 	authGroup.POST("/login", handlers.Login)
 
+	// Endpoint publik (tanpa login): daftar member berportofolio + berblog,
+	// profil publik, dan halaman baca blog.
+	publicGroup := api.Group("/public")
+	{
+		publicGroup.GET("/members", handlers.ListPublicMembers)
+		publicGroup.GET("/members/:username", handlers.GetPublicProfile)
+		publicGroup.GET("/members/:username/posts/:slug", handlers.GetPublicPost)
+		publicGroup.GET("/posts", handlers.ListPublicPosts)
+	}
+
 	userGroup := api.Group("/user")
 	userGroup.GET("/check-username", handlers.CheckUsername)
 
@@ -34,6 +44,15 @@ func SetupRoutes(r *gin.Engine) {
 		protected.POST("/portfolios", handlers.CreatePortfolio)
 		protected.PUT("/portfolios/:id", handlers.UpdatePortfolio)
 		protected.DELETE("/portfolios/:id", handlers.DeletePortfolio)
+
+		// Blog pribadi: CRUD artikel berbasis blok (teks/gambar/video/audio/3D/embed)
+		// plus endpoint upload media.
+		protected.GET("/blog/posts", handlers.GetMyPosts)
+		protected.POST("/blog/posts", handlers.CreatePost)
+		protected.GET("/blog/posts/:id", handlers.GetMyPost)
+		protected.PUT("/blog/posts/:id", handlers.UpdatePost)
+		protected.DELETE("/blog/posts/:id", handlers.DeletePost)
+		protected.POST("/blog/media", handlers.UploadBlogMedia)
 	}
 
 	// Khusus admin: kelola seluruh user (ubah role, suspend, hapus)

@@ -27,6 +27,8 @@ func main() {
 		&models.WorkExperience{},
 		&models.Subject{},
 		&models.Portfolio{},
+		&models.BlogPost{},
+		&models.BlogBlock{},
 	)
 
 	config.DB.Model(&models.User{}).
