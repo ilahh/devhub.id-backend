@@ -14,7 +14,6 @@ import (
 	"backend/utils"
 )
 
-// GetPortfolios mengembalikan seluruh item portofolio milik user yang login.
 func GetPortfolios(c *gin.Context) {
 	userID := c.GetUint("userID")
 
@@ -27,13 +26,10 @@ func GetPortfolios(c *gin.Context) {
 	utils.SuccessResponse(c, 200, gin.H{"portfolios": items})
 }
 
-// handlePortfolioImage memproses file gambar opsional dari form multipart.
-// Mengembalikan URL gambar (jika ada), penanda apakah ada file diupload, dan
-// pesan error (kosong bila tidak ada masalah).
 func handlePortfolioImage(c *gin.Context, userID uint) (imageURL *string, uploaded bool, errMsg string) {
 	file, err := c.FormFile("image")
 	if err != nil {
-		return nil, false, "" // tidak ada gambar diupload
+		return nil, false, ""
 	}
 
 	if file.Size > 5*1024*1024 {
@@ -64,8 +60,6 @@ func handlePortfolioImage(c *gin.Context, userID uint) (imageURL *string, upload
 	return &url, true, ""
 }
 
-// CreatePortfolio menambah satu item portofolio (form multipart agar bisa
-// sekaligus mengunggah gambar untuk jenis projek).
 func CreatePortfolio(c *gin.Context) {
 	userID := c.GetUint("userID")
 
@@ -101,8 +95,6 @@ func CreatePortfolio(c *gin.Context) {
 	utils.SuccessResponse(c, 201, item)
 }
 
-// UpdatePortfolio memperbarui satu item portofolio milik user. Gambar hanya
-// diganti bila ada file baru; bila form "remove_image" = "true" gambar dihapus.
 func UpdatePortfolio(c *gin.Context) {
 	userID := c.GetUint("userID")
 	id := c.Param("id")
@@ -146,7 +138,6 @@ func UpdatePortfolio(c *gin.Context) {
 	utils.SuccessResponse(c, 200, item)
 }
 
-// DeletePortfolio menghapus satu item portofolio milik user.
 func DeletePortfolio(c *gin.Context) {
 	userID := c.GetUint("userID")
 	id := c.Param("id")

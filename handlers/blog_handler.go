@@ -30,11 +30,11 @@ type postInput struct {
 	Title    string       `json:"title"`
 	Excerpt  string       `json:"excerpt"`
 	CoverURL string       `json:"cover_url"`
+	Content  string       `json:"content"`
 	Status   string       `json:"status"`
 	Blocks   []blockInput `json:"blocks"`
 }
 
-// normalizeStatus memastikan status hanya bernilai "draft" atau "published".
 func normalizeStatus(s string) string {
 	if s == "published" {
 		return "published"
@@ -42,9 +42,6 @@ func normalizeStatus(s string) string {
 	return "draft"
 }
 
-// uniqueSlug menghasilkan slug yang unik untuk seorang user. Bila slug dasar
-// sudah dipakai, ditambahkan sufiks angka (-2, -3, ...). excludeID dipakai saat
-// update agar post yang sedang diedit tidak dianggap bentrok dengan dirinya sendiri.
 func uniqueSlug(userID uint, base string, excludeID uint) string {
 	if base == "" {
 		base = "post"
@@ -64,8 +61,6 @@ func uniqueSlug(userID uint, base string, excludeID uint) string {
 	}
 }
 
-// buildBlocks memvalidasi & menyusun blok dari payload menjadi model siap simpan,
-// sekaligus menetapkan urutan (Position) dan membuang blok kosong.
 func buildBlocks(postID, userID uint, inputs []blockInput) []models.BlogBlock {
 	blocks := make([]models.BlogBlock, 0, len(inputs))
 	pos := 0
@@ -74,7 +69,6 @@ func buildBlocks(postID, userID uint, inputs []blockInput) []models.BlogBlock {
 		if !validBlockTypes[t] {
 			continue
 		}
-		// Buang blok yang tidak punya isi berarti.
 		if (t == "text" || t == "embed") && strings.TrimSpace(b.Text) == "" {
 			continue
 		}
@@ -98,7 +92,6 @@ func orderedBlocks(db *gorm.DB) *gorm.DB {
 	return db.Order("position asc")
 }
 
-// GetMyPosts mengembalikan seluruh blog milik user yang login (draft & publish).
 func GetMyPosts(c *gin.Context) {
 	userID := c.GetUint("userID")
 
@@ -113,7 +106,6 @@ func GetMyPosts(c *gin.Context) {
 	utils.SuccessResponse(c, 200, gin.H{"posts": posts})
 }
 
-// GetMyPost mengembalikan satu blog milik user yang login (untuk halaman editor).
 func GetMyPost(c *gin.Context) {
 	userID := c.GetUint("userID")
 	id := c.Param("id")
@@ -128,7 +120,6 @@ func GetMyPost(c *gin.Context) {
 	utils.SuccessResponse(c, 200, post)
 }
 
-// CreatePost membuat blog baru beserta blok-bloknya, dibungkus transaksi.
 func CreatePost(c *gin.Context) {
 	userID := c.GetUint("userID")
 
@@ -150,6 +141,7 @@ func CreatePost(c *gin.Context) {
 		Slug:    uniqueSlug(userID, utils.Slugify(title), 0),
 		Title:   title,
 		Excerpt: strings.TrimSpace(input.Excerpt),
+		Content: input.Content,
 		Status:  status,
 	}
 	if cover := strings.TrimSpace(input.CoverURL); cover != "" {
@@ -181,8 +173,6 @@ func CreatePost(c *gin.Context) {
 	utils.SuccessResponse(c, 201, post)
 }
 
-// UpdatePost memperbarui blog milik user. Blok lama dihapus lalu ditulis ulang
-// dari payload (pola replace) di dalam transaksi agar konsisten.
 func UpdatePost(c *gin.Context) {
 	userID := c.GetUint("userID")
 	id := c.Param("id")
@@ -209,13 +199,13 @@ func UpdatePost(c *gin.Context) {
 
 	post.Title = title
 	post.Excerpt = strings.TrimSpace(input.Excerpt)
+	post.Content = input.Content
 	if cover := strings.TrimSpace(input.CoverURL); cover != "" {
 		post.CoverURL = &cover
 	} else {
 		post.CoverURL = nil
 	}
 
-	// Set published_at saat pertama kali dipublikasikan; kosongkan bila kembali draft.
 	if status == "published" && post.Status != "published" {
 		now := time.Now()
 		post.PublishedAt = &now
@@ -248,7 +238,6 @@ func UpdatePost(c *gin.Context) {
 	utils.SuccessResponse(c, 200, post)
 }
 
-// DeletePost menghapus blog milik user beserta seluruh bloknya.
 func DeletePost(c *gin.Context) {
 	userID := c.GetUint("userID")
 	id := c.Param("id")
@@ -273,7 +262,6 @@ func DeletePost(c *gin.Context) {
 	utils.SuccessResponse(c, 200, gin.H{"message": "Blog dihapus"})
 }
 
-// blogMediaRules menentukan batas ukuran & format per jenis media blog.
 var blogMediaRules = map[string]struct {
 	MaxBytes int64
 	Exts     map[string]bool
@@ -284,8 +272,6 @@ var blogMediaRules = map[string]struct {
 	"model3d": {30 * 1024 * 1024, map[string]bool{".glb": true, ".gltf": true}},
 }
 
-// UploadBlogMedia menerima satu file media (image/audio/video/model3d) dan
-// mengembalikan URL-nya. Frontend memakai URL ini sebagai isi blok.
 func UploadBlogMedia(c *gin.Context) {
 	userID := c.GetUint("userID")
 

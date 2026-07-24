@@ -37,11 +37,24 @@ type publicPostSummary struct {
 	PublishedAt *time.Time `json:"published_at"`
 }
 
+type publicContact struct {
+	Phone    string `json:"phone"`
+	Email    string `json:"email"`
+	Address  string `json:"address"`
+	Github   string `json:"github"`
+	Linkedin string `json:"linkedin"`
+	Website  string `json:"website"`
+}
+
 type publicProfileResponse struct {
 	User         publicUser                  `json:"user"`
 	Professional professionalProfileResponse `json:"professional"`
+	Contact      publicContact               `json:"contact"`
 	Portfolios   []models.Portfolio          `json:"portfolios"`
 	Posts        []publicPostSummary         `json:"posts"`
+	TotalPosts   int64                       `json:"total_posts"`
+	TotalPages   int                         `json:"total_pages"`
+	CurrentPage  int                         `json:"current_page"`
 }
 
 func usernameOf(u models.User) string {
@@ -51,9 +64,6 @@ func usernameOf(u models.User) string {
 	return ""
 }
 
-// ListPublicMembers mengembalikan member (user aktif yang sudah punya username)
-// yang TELAH mengisi portofolio DAN menerbitkan minimal satu blog. Inilah daftar
-// yang muncul di halaman depan (non-login).
 func ListPublicMembers(c *gin.Context) {
 	var users []models.User
 	config.DB.
@@ -85,10 +95,14 @@ func ListPublicMembers(c *gin.Context) {
 	utils.SuccessResponse(c, 200, gin.H{"members": members})
 }
 
-// GetPublicProfile mengembalikan profil publik seorang member berdasarkan username:
-// profil profesional, portofolio, dan daftar blog yang sudah dipublikasikan.
 func GetPublicProfile(c *gin.Context) {
 	username := strings.ToLower(strings.TrimSpace(c.Param("username")))
+
+	page, _ := strconv.Atoi(c.Query("page"))
+	if page < 1 {
+		page = 1
+	}
+	const postLimit = 4
 
 	var user models.User
 	if err := config.DB.Where("username = ? AND is_active = ?", username, true).First(&user).Error; err != nil {
@@ -115,14 +129,28 @@ func GetPublicProfile(c *gin.Context) {
 		subjects = []models.Subject{}
 	}
 
+	var contact models.Contact
+	config.DB.Where("user_id = ?", user.Id).First(&contact)
+
 	var portfolios []models.Portfolio
 	config.DB.Where("user_id = ?", user.Id).Order("id desc").Find(&portfolios)
 	if portfolios == nil {
 		portfolios = []models.Portfolio{}
 	}
 
+	var totalPosts int64
+	config.DB.Model(&models.BlogPost{}).Where("user_id = ? AND status = ?", user.Id, "published").Count(&totalPosts)
+
 	var posts []models.BlogPost
-	config.DB.Where("user_id = ? AND status = ?", user.Id, "published").Order("published_at desc").Find(&posts)
+	config.DB.Where("user_id = ? AND status = ?", user.Id, "published").
+		Order("published_at desc").
+		Offset((page - 1) * postLimit).Limit(postLimit).Find(&posts)
+
+	totalPages := int((totalPosts + postLimit - 1) / postLimit)
+	if totalPages < 1 {
+		totalPages = 1
+	}
+
 	summaries := make([]publicPostSummary, 0, len(posts))
 	for _, p := range posts {
 		summaries = append(summaries, publicPostSummary{
@@ -140,13 +168,22 @@ func GetPublicProfile(c *gin.Context) {
 			Experiences:      experiences,
 			Subjects:         subjects,
 		},
-		Portfolios: portfolios,
-		Posts:      summaries,
+		Contact: publicContact{
+			Phone:    contact.Phone,
+			Email:    contact.Email,
+			Address:  contact.Address,
+			Github:   contact.Github,
+			Linkedin: contact.Linkedin,
+			Website:  contact.Website,
+		},
+		Portfolios:  portfolios,
+		Posts:       summaries,
+		TotalPosts:  totalPosts,
+		TotalPages:  totalPages,
+		CurrentPage: page,
 	})
 }
 
-// GetPublicPost mengembalikan satu blog yang sudah dipublikasikan (beserta blok)
-// milik member tertentu, dipakai untuk halaman baca publik.
 func GetPublicPost(c *gin.Context) {
 	username := strings.ToLower(strings.TrimSpace(c.Param("username")))
 	slug := c.Param("slug")
@@ -172,8 +209,6 @@ func GetPublicPost(c *gin.Context) {
 	})
 }
 
-// ---- Halaman depan berbasis artikel (non-login) ----
-
 type publicArticleAuthor struct {
 	Username  string  `json:"username"`
 	AvatarURL *string `json:"avatar_url"`
@@ -191,7 +226,6 @@ type publicArticle struct {
 	Author      publicArticleAuthor `json:"author"`
 }
 
-// readMinutes memperkirakan lama baca dari jumlah kata pada blok teks (~200 wpm).
 func readMinutes(p models.BlogPost) int {
 	words := 0
 	for _, b := range p.Blocks {
@@ -206,7 +240,6 @@ func readMinutes(p models.BlogPost) int {
 	return m
 }
 
-// mapArticles mengubah daftar BlogPost menjadi ringkasan artikel + info penulis.
 func mapArticles(posts []models.BlogPost) []publicArticle {
 	out := make([]publicArticle, 0, len(posts))
 	userCache := map[uint]models.User{}
@@ -242,10 +275,6 @@ func mapArticles(posts []models.BlogPost) []publicArticle {
 	return out
 }
 
-// ListPublicPosts mengembalikan artikel blog yang sudah dipublikasikan untuk
-// halaman depan: daftar "Artikel Terbaru" (9 per halaman, dengan pagination) dan
-// "Sorotan Minggu Ini" (artikel sepekan terakhir, hanya di halaman 1).
-// Artikel yang sudah tampil di sorotan tidak akan muncul lagi di daftar terbaru.
 func ListPublicPosts(c *gin.Context) {
 	const limit = 9
 
@@ -254,7 +283,6 @@ func ListPublicPosts(c *gin.Context) {
 		page = 1
 	}
 
-	// Sorotan hanya dihitung di halaman pertama (maksimal 3 artikel terbaru).
 	featured := []publicArticle{}
 	var featuredIDs []uint
 	if page == 1 {
@@ -262,7 +290,6 @@ func ListPublicPosts(c *gin.Context) {
 		var feat []models.BlogPost
 		config.DB.Where("status = ? AND published_at >= ?", "published", weekAgo).
 			Preload("Blocks").Order("published_at desc").Limit(3).Find(&feat)
-		// Fallback: bila belum ada yang terbit pekan ini, ambil 3 terbaru.
 		if len(feat) == 0 {
 			config.DB.Where("status = ?", "published").
 				Preload("Blocks").Order("published_at desc").Limit(3).Find(&feat)
@@ -273,9 +300,7 @@ func ListPublicPosts(c *gin.Context) {
 		}
 	}
 
-	// Query dasar: hanya artikel yang sudah dipublikasikan.
 	baseQuery := config.DB.Where("status = ?", "published")
-	// Pada halaman 1, kecualikan artikel yang sudah tampil di sorotan.
 	if len(featuredIDs) > 0 {
 		baseQuery = baseQuery.Where("id NOT IN ?", featuredIDs)
 	}

@@ -7,8 +7,6 @@ import (
 
 var nonAlnumRegex = regexp.MustCompile(`[^a-z0-9]+`)
 
-// Slugify mengubah teks bebas menjadi slug URL-friendly.
-// Contoh: "Belajar React Hooks!" -> "belajar-react-hooks".
 func Slugify(s string) string {
 	s = strings.ToLower(strings.TrimSpace(s))
 	s = nonAlnumRegex.ReplaceAllString(s, "-")

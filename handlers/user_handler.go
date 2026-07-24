@@ -49,7 +49,6 @@ func UpdateProfile(c *gin.Context) {
 		return
 	}
 
-	// Huruf besar disimpan sebagai huruf kecil
 	username := strings.ToLower(input.Username)
 
 	var existing models.User
@@ -81,7 +80,6 @@ func CheckUsername(c *gin.Context) {
 		return
 	}
 
-	// Huruf besar disimpan sebagai huruf kecil, jadi pengecekan juga pakai versi lowercase
 	username = strings.ToLower(username)
 
 	var existing models.User

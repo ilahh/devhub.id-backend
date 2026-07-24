@@ -40,9 +40,6 @@ func Register(c *gin.Context) {
 		return
 	}
 
-	// Jangan mengisi username otomatis dari email.
-	// Biarkan kosong (NULL) supaya user baru diarahkan ke halaman
-	// "Lengkapi Profil" untuk memilih username mereka sendiri.
 	var usernamePtr *string
 	if strings.TrimSpace(input.Username) != "" {
 		normalized := strings.ToLower(strings.TrimSpace(input.Username))
@@ -66,7 +63,6 @@ func Register(c *gin.Context) {
 		return
 	}
 
-	// User pertama yang mendaftar otomatis jadi admin.
 	var count int64
 	config.DB.Model(&models.User{}).Count(&count)
 

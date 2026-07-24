@@ -17,14 +17,10 @@ type professionalProfileResponse struct {
 	Subjects         []models.Subject        `json:"subjects"`
 }
 
-// GetProfessionalProfile mengembalikan seluruh data profil profesional milik
-// user yang sedang login (tempat tugas, skill, riwayat pekerjaan, mata pelajaran).
 func GetProfessionalProfile(c *gin.Context) {
 	userID := c.GetUint("userID")
 
 	var profile models.ProfessionalProfile
-	// Abaikan error "record not found" — user yang belum mengisi tetap dapat
-	// respons dengan nilai kosong.
 	config.DB.Where("user_id = ?", userID).First(&profile)
 
 	var skills []models.Skill
@@ -80,9 +76,6 @@ type updateProfessionalProfileInput struct {
 	Subjects         []subjectInput    `json:"subjects"`
 }
 
-// UpdateProfessionalProfile menyimpan seluruh profil profesional sekaligus.
-// Pendekatannya "replace": data skill/riwayat/mapel lama milik user dihapus lalu
-// ditulis ulang dari payload, dibungkus transaksi agar konsisten.
 func UpdateProfessionalProfile(c *gin.Context) {
 	userID := c.GetUint("userID")
 
@@ -93,7 +86,6 @@ func UpdateProfessionalProfile(c *gin.Context) {
 	}
 
 	err := config.DB.Transaction(func(tx *gorm.DB) error {
-		// Upsert tempat tugas sekarang.
 		var profile models.ProfessionalProfile
 		if err := tx.Where("user_id = ?", userID).First(&profile).Error; err != nil {
 			profile = models.ProfessionalProfile{UserId: userID}
@@ -104,7 +96,6 @@ func UpdateProfessionalProfile(c *gin.Context) {
 			return err
 		}
 
-		// Ganti seluruh skill.
 		if err := tx.Where("user_id = ?", userID).Delete(&models.Skill{}).Error; err != nil {
 			return err
 		}
@@ -117,7 +108,6 @@ func UpdateProfessionalProfile(c *gin.Context) {
 			}
 		}
 
-		// Ganti seluruh riwayat pekerjaan.
 		if err := tx.Where("user_id = ?", userID).Delete(&models.WorkExperience{}).Error; err != nil {
 			return err
 		}
@@ -137,7 +127,6 @@ func UpdateProfessionalProfile(c *gin.Context) {
 			}
 		}
 
-		// Ganti seluruh mata pelajaran.
 		if err := tx.Where("user_id = ?", userID).Delete(&models.Subject{}).Error; err != nil {
 			return err
 		}
@@ -158,6 +147,5 @@ func UpdateProfessionalProfile(c *gin.Context) {
 		return
 	}
 
-	// Balas dengan data terbaru.
 	GetProfessionalProfile(c)
 }

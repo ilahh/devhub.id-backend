@@ -10,7 +10,6 @@ import (
 	"backend/utils"
 )
 
-// ListUsers mengembalikan seluruh user beserta role dan statusnya. Khusus admin.
 func ListUsers(c *gin.Context) {
 	var users []models.User
 	if err := config.DB.Order("id asc").Find(&users).Error; err != nil {
@@ -25,8 +24,6 @@ type UpdateRoleInput struct {
 	Role models.Role `json:"role" binding:"required"`
 }
 
-// UpdateUserRole mengubah role seorang user. Admin tidak bisa mengubah role dirinya sendiri
-// supaya tidak ada kondisi tanpa admin yang tersisa.
 func UpdateUserRole(c *gin.Context) {
 	targetID, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
@@ -65,8 +62,6 @@ type UpdateStatusInput struct {
 	IsActive bool `json:"is_active"`
 }
 
-// ToggleUserStatus mengaktifkan/menonaktifkan akun user mana pun. Admin tidak bisa
-// menonaktifkan akunnya sendiri.
 func ToggleUserStatus(c *gin.Context) {
 	targetID, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
@@ -101,7 +96,6 @@ func ToggleUserStatus(c *gin.Context) {
 	utils.SuccessResponse(c, 200, user)
 }
 
-// DeleteUser menghapus akun user. Admin tidak bisa menghapus akunnya sendiri.
 func DeleteUser(c *gin.Context) {
 	targetID, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {

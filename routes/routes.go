@@ -15,8 +15,6 @@ func SetupRoutes(r *gin.Engine) {
 	authGroup.POST("/register", handlers.Register)
 	authGroup.POST("/login", handlers.Login)
 
-	// Endpoint publik (tanpa login): daftar member berportofolio + berblog,
-	// profil publik, dan halaman baca blog.
 	publicGroup := api.Group("/public")
 	{
 		publicGroup.GET("/members", handlers.ListPublicMembers)
@@ -35,18 +33,17 @@ func SetupRoutes(r *gin.Engine) {
 		protected.PUT("/profile", handlers.UpdateProfile)
 		protected.POST("/avatar", handlers.UploadAvatar)
 
-		// Profil Profesional: skill, riwayat pekerjaan, tempat tugas, mata pelajaran.
 		protected.GET("/professional-profile", handlers.GetProfessionalProfile)
 		protected.PUT("/professional-profile", handlers.UpdateProfessionalProfile)
 
-		// Portofolio: kumpulan karya/pencapaian milik user (CRUD + upload gambar).
+		protected.GET("/contact", handlers.GetContact)
+		protected.PUT("/contact", handlers.UpdateContact)
+
 		protected.GET("/portfolios", handlers.GetPortfolios)
 		protected.POST("/portfolios", handlers.CreatePortfolio)
 		protected.PUT("/portfolios/:id", handlers.UpdatePortfolio)
 		protected.DELETE("/portfolios/:id", handlers.DeletePortfolio)
 
-		// Blog pribadi: CRUD artikel berbasis blok (teks/gambar/video/audio/3D/embed)
-		// plus endpoint upload media.
 		protected.GET("/blog/posts", handlers.GetMyPosts)
 		protected.POST("/blog/posts", handlers.CreatePost)
 		protected.GET("/blog/posts/:id", handlers.GetMyPost)
@@ -55,7 +52,6 @@ func SetupRoutes(r *gin.Engine) {
 		protected.POST("/blog/media", handlers.UploadBlogMedia)
 	}
 
-	// Khusus admin: kelola seluruh user (ubah role, suspend, hapus)
 	adminGroup := api.Group("/admin")
 	adminGroup.Use(middleware.AuthRequired(), middleware.RoleRequired(models.RoleAdmin))
 	{
@@ -65,7 +61,6 @@ func SetupRoutes(r *gin.Engine) {
 		adminGroup.DELETE("/users/:id", handlers.DeleteUser)
 	}
 
-	// Khusus moderator (admin juga boleh akses): moderasi user dengan role member
 	moderatorGroup := api.Group("/moderator")
 	moderatorGroup.Use(middleware.AuthRequired(), middleware.RoleRequired(models.RoleAdmin, models.RoleModerator))
 	{

@@ -29,6 +29,7 @@ func main() {
 		&models.Portfolio{},
 		&models.BlogPost{},
 		&models.BlogBlock{},
+		&models.Contact{},
 	)
 
 	config.DB.Model(&models.User{}).
